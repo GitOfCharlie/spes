@@ -3,6 +3,7 @@ package SimpleQueryTests;
 import SimpleQueryTests.tableSchema.ACCOUNT;
 import SimpleQueryTests.tableSchema.BONUS;
 import SimpleQueryTests.tableSchema.DEPT;
+import SimpleQueryTests.tableSchema.dynamic.DynamicTable;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.RelOptUtil;
@@ -18,6 +19,7 @@ import org.apache.calcite.tools.*;
 import SimpleQueryTests.tableSchema.EMP;
 
 import java.lang.reflect.Type;
+import java.util.List;
 
 public class simpleParser {
         public static final JavaTypeFactory typeFactory = new JavaTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
@@ -36,6 +38,14 @@ public class simpleParser {
             defaultSchema.add("DEPT",new DEPT());
             defaultSchema.add("BONUS",new BONUS());
             defaultSchema.add("ACCOUNT",new ACCOUNT());
+        }
+
+        public static void addDynamicTableSchema(List<List<String>> tableSchema){
+            int i = 0;
+            for(List<String> cols: tableSchema) {
+                defaultSchema.add("T" + (i), new DynamicTable(cols));
+                i++;
+            }
         }
 
         public RelNode getRelNode(String sql) throws SqlParseException, ValidationException, RelConversionException{

@@ -11,6 +11,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class NotIn extends RexCall {
@@ -24,7 +25,8 @@ public class NotIn extends RexCall {
             null);
 
     public NotIn (AlgeNode subQuery,List<RexNode> columns){
-        super(RexNodeHelper.typeFactory.createJavaType(Boolean.class),NotIn,new ArrayList<>());
+        super(RexNodeHelper.typeFactory.createJavaType(Boolean.class),NotIn,
+                Arrays.asList(subQuery.getOutputExpr().get(0), columns.get(0)));
         this.subQuery = subQuery;
         this.columns = columns;
     }

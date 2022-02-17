@@ -3,7 +3,6 @@ package SimpleQueryTests;
 import AlgeNode.AlgeNode;
 import AlgeNodeParser.AlgeNodeParserPair;
 import AlgeRule.AlgeRule;
-import SymbolicRexNode.SymbolicColumn;
 import Z3Helper.z3Utility;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -14,9 +13,10 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalJoin;
-import org.apache.calcite.sql.JoinType;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SimpleAnalysis {
     static long time = 0;
@@ -27,8 +27,23 @@ public class SimpleAnalysis {
     static int outerJoinCount = 0;
     static long outerJoinTime = 0;
 
+    static List<Integer> eqPairList = new ArrayList<>();
 
-    public static boolean BeVerified (String sql1, String sql2, String name, PrintWriter cannotCompile, PrintWriter cannotProve, PrintWriter prove, PrintWriter bug) {
+
+    public static boolean BeVerified
+        (int pairId,
+         String sql1,
+         String sql2,
+         String name,
+         PrintWriter cannotCompile,
+         PrintWriter cannotProve,
+         PrintWriter prove,
+         PrintWriter bug)
+    {
+        if (pairId == 1) {
+            System.out.println("here 1");
+        }
+
         if ((contains(sql1)) || (contains(sql2))) {
             return false;
         }
@@ -47,7 +62,7 @@ public class SimpleAnalysis {
             compile = true;
         } catch (Exception e) {
             System.out.println("fail compile");
-            cannotCompile.println(name);
+            cannotCompile.println(pairId + ". " + name);
             cannotCompile.println("---------------------------------------------------");
             cannotCompile.println(e);
             StackTraceElement[] reasons = e.getStackTrace();
@@ -85,12 +100,18 @@ public class SimpleAnalysis {
                         SPJcount ++;
                         SPJTime = caseTime+SPJTime;
                     }
-                    prove.println(name);
+                    prove.println("pair id: " + pairId);
+                    prove.println("name: " + name);
+                    prove.println("sql1: " + sql1);
+                    prove.println("sql2: " + sql2);
+                    prove.println("\n");
                     prove.flush();
                     z3Context.close();
+
+                    eqPairList.add(pairId);
                     return true;
                 } else {
-                    cannotProve.println(name);
+                    cannotProve.println(pairId + ". " + name);
                     cannotProve.println(RelOptUtil.toString(logicPlan));
                     cannotProve.println(RelOptUtil.toString(logicPlan2));
                     cannotProve.flush();
@@ -100,7 +121,7 @@ public class SimpleAnalysis {
             }catch(Exception e){
                 System.out.println("buggy in code");
                 z3Context.close();
-                bug.println(name);
+                bug.println(pairId + ". " + name);
                 bug.println("---------------------------------------------------");
                 bug.println(e);
                 StackTraceElement[] reasons = e.getStackTrace();
@@ -119,20 +140,14 @@ public class SimpleAnalysis {
         File f = new File("testData/calcite_tests.json");
         JsonParser parser = new JsonParser();
         JsonArray array = parser.parse(new FileReader(f)).getAsJsonArray();
-        FileWriter prove = new FileWriter("calciteProve.txt");
-        BufferedWriter bw = new BufferedWriter(prove);
-        PrintWriter out = new PrintWriter(bw);
-        FileWriter notProve = new FileWriter("cannotProve.txt");
-        BufferedWriter bw2 = new BufferedWriter(notProve);
-        PrintWriter out2 = new PrintWriter(bw2);
-        FileWriter notCompile = new FileWriter("cannotCompile.txt");
-        BufferedWriter bw3 = new BufferedWriter(notCompile);
-        PrintWriter out3 = new PrintWriter(bw3);
-        FileWriter bug = new FileWriter("bug.txt");
-        BufferedWriter bw4 = new BufferedWriter(bug);
-        PrintWriter out4 = new PrintWriter(bw4);
+        // FileWriter prove = new FileWriter("calciteProve.txt");
+        // BufferedWriter bw = new BufferedWriter(prove);
+        PrintWriter prove = new PrintWriter(new BufferedWriter(new FileWriter("calciteProve.txt")));
+        PrintWriter notProve = new PrintWriter(new BufferedWriter(new FileWriter("cannotProve.txt")));
+        PrintWriter notCompile = new PrintWriter(new BufferedWriter(new FileWriter("cannotCompile.txt")));
+        PrintWriter bug = new PrintWriter(new BufferedWriter(new FileWriter("bug.txt")));
         int count = 0;
-        for(int i=0;i<array.size();i++){
+        for(int i = 0; i < array.size(); i++){
             JsonObject testCase = array.get(i).getAsJsonObject();
             String query1 = testCase.get("q1").getAsString();
             String query2 = testCase.get("q2").getAsString();
@@ -143,12 +158,9 @@ public class SimpleAnalysis {
 //                continue;
 //            }
 
-            boolean result = BeVerified(query1,query2,name,out3,out2,out,out4);
-            if(result){
+            boolean result = BeVerified(i + 1, query1, query2, name, notCompile, notProve, prove, bug);
 
-                count++;
-            }
-
+            if(result) count++;
         }
         System.out.println("what is the number:"+count);
         System.out.println(time/count);
@@ -158,10 +170,11 @@ public class SimpleAnalysis {
         System.out.println(aggTime/aggCount);
         System.out.println("Outer join number:"+outerJoinCount);
         System.out.println(outerJoinTime/outerJoinCount);
-        out.close();
-        out2.close();
-        out3.close();
-        out4.close();
+        System.out.println(eqPairList);
+        prove.close();
+        notProve.close();
+        notCompile.close();
+        bug.close();
     }
     static public boolean contains(String sql){
         String[] keyWords ={"VALUE","EXISTS","ROW","ORDER","CAST","INTERSECT","EXCEPT", " IN "};
